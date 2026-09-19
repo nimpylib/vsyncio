@@ -21,6 +21,7 @@ template pylib(x, ver) =
   requires if pylibPre == "": x & ver
            else: pylibPre & x
 
+pylib "handy_sugars", " ^= 0.1.0"
 pylib "pyerrors", " ^= 0.1.0"
 pylib "jscompat", " ^= 0.1.9"
 pylib "errno", " ^= 0.1.0"
