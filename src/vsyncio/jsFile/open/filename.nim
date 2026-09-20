@@ -31,7 +31,7 @@ proc open*(f: var File, p: string, mode: FileMode = fmRead): bool =
       setErrnoRaw(denoErrno($errName))
       return false
     if denoFile.isNull or denoFile.isUndefined: return false
-    f = File(raw: newFileIO(FileHandle -1, seekable = true, name = p,
+    f = BufferedIOBase(raw: newFileIO(FileHandle -1, seekable = true, name = p,
       writable = mode in {fmWrite, fmAppend, fmReadWriteExisting, fmReadWrite},
       append = mode == fmAppend,
       denoFile = denoFile, isDenoFile = true))
@@ -40,7 +40,7 @@ proc open*(f: var File, p: string, mode: FileMode = fmRead): bool =
   catchJsErrAndSetErrno:
     fd = fsOpenSync(cstring p, jsPrivOpenFlags[mode])
   if fd < 0: return false
-  f = File(raw: newFileIO(FileHandle fd, seekable = true, name = p,
+  f = BufferedIOBase(raw: newFileIO(FileHandle fd, seekable = true, name = p,
     writable = mode in {fmWrite, fmAppend, fmReadWriteExisting, fmReadWrite},
     append = mode == fmAppend))
   result = true

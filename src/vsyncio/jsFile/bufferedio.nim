@@ -72,7 +72,7 @@ method readChar*(f): char {.bIO.} =
   result = chr f.rbuf[f.rbufPos]
   inc f.rbufPos
 
-proc pushCharBack*(f; c: char) =
+method pushCharBack*(f; c: char) =
   f.hasPB = true
   f.pb = c
   if f.rbufValid and f.rbufPos > 0:

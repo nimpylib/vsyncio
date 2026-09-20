@@ -2,9 +2,11 @@
 when defined(js):
   import ../extra/isatty
   import ../jsFile as fileobj_js
-  import ../jsFile/bufferedio
-  method isatty*(f: fileobj_js.File): bool {.base, raises: [].} =
-    isatty(getFileHandle(f).int, denoHandle(f), usesDenoFile(f))
+  import ../jsFile/[iobase, rawio]
+  export iobase.isatty
+  method isatty*(f: RawIOBase): bool =
+    let (file, useDeno) = f.getDenoFile
+    isatty(getFileHandle(f).int, file, useDeno)
 else:
   from std/terminal import isatty
   export isatty

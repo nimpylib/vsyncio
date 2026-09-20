@@ -1,6 +1,6 @@
 
 import pkg/jscompat/utils/deno
-import ../stdios
+import ../[stdios, bufferedio]
 include ./comm
 
 template DenoNoFdHint = discard
@@ -23,6 +23,6 @@ proc open*(f: var File, filehandle: FileHandle,
     return false
   else:
     let name = "<fd " & $fd & ">"
-    f = new[File](name, filehandle, mode)
+    f = new[BufferedIOBase](name, filehandle, mode)
     return true
 

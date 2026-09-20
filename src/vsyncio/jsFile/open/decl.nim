@@ -1,4 +1,4 @@
 
-import ../bufferedio
+import ../iobase
 type
-  File* = BufferedIOBase
+  File* = IOBase

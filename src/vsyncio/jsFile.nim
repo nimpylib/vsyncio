@@ -7,6 +7,6 @@
 import pkg/handy_sugars/trans_imp
 
 impExpCwd jsFile, [
-  rawio, bufferedio, stdios, openfile,
+  iobase, rawio, bufferedio, stdios, openfile,
 ]
 

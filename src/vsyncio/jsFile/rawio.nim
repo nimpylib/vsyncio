@@ -24,9 +24,9 @@ type
 
   FileIO* = ref object of RawIOBase
 
-proc getFileHandle*(f: RawIOBase): FileHandle = f.fd
-func denoHandle*(f: RawIOBase): JsObject = f.denoFile
-func usesDenoFile*(f: RawIOBase): bool = f.isDenoFile
+method getFileHandle*(f: RawIOBase): FileHandle {.raises: [].} = f.fd
+proc getDenoFile*(f: RawIOBase): tuple[f: JsObject, useDeno: bool] =
+  (f.denoFile, f.isDenoFile)
 
 proc newFileIO*(fd: FileHandle, seekable: bool, name: string,
     writable, append: bool,
@@ -66,7 +66,7 @@ proc getFileSize*(f: RawIOBase): int64 =
     else:
       result = int64(jsFstatSize(fsFstatSync(f.fd.cint)))
 
-proc flushFile*(f: RawIOBase) {.raises: [].} =
+method flushFile*(f: RawIOBase) {.raises: [].} =
   if f.isDenoFile:
     if f.seekable:
       if f.writable:
@@ -84,7 +84,7 @@ proc flushFile*(f: RawIOBase) {.raises: [].} =
     jsTryDiscard:
       fsFsyncSync(f.fd.cint)
 
-proc close*(f: RawIOBase) {.raises: [].} =
+method close*(f: RawIOBase) {.raises: [].} =
   if f.fd.cint < 0: return  # never close closed. reentrant
   jsTryDiscard:
     if f.isDenoFile:

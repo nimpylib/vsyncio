@@ -13,7 +13,7 @@ type File = decl.File  # shadow system's syncio.File
 
 var stdin*, stdout*, stderr*: File
 
-proc new*[F: File](name: string, filehandle: int|FileHandle, mode: FileMode;
+proc new*[F: BufferedIOBase](name: string, filehandle: int|FileHandle, mode: FileMode;
                    seekable = when F is StdioFile: false else: true): F =
   F(raw: newFileIO(FileHandle filehandle, seekable, name,
     writable = mode != fmRead, append = mode == fmAppend))
