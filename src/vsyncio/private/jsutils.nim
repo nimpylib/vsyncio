@@ -1,24 +1,4 @@
 
-template jsTryCatchE*(body, catchBody) {.dirty.} =
-  {.emit: "try {".}
-  body
-  {.emit: "} catch (e) {".}
-  catchBody
-  {.emit: "}".}
+import pkg/jscompat/utils/catchJsErr
+export catchJsErr
 
-template jsTryAsIOError*(body) {.dirty.} =
-  var failed = false
-  var msg: cstring
-  jsTryCatchE:
-    body
-  do:
-    failed = true
-    {.emit: [msg, " = e.message ?? String(e);"].}
-  if failed:
-    raise newException(IOError, $msg)
-
-template jsTryDiscard*(body) {.dirty.} =
-  jsTryCatchE:
-    body
-  do:
-    discard
