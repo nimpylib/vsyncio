@@ -12,16 +12,15 @@ from pkg/pysimperr import KeyboardInterrupt
 export KeyboardInterrupt
 when defined(js):
 
-  type ReadLineCb = proc(ps: cstring): MayPromise[cstring] {.raises: [KeyboardInterrupt, IOError, EOFError].}
+  {.pragma: RlCbPragma, raises: [KeyboardInterrupt, IOError, EOFError], nimcall.}
+  type ReadLineCb = proc(ps: cstring): MayPromise[cstring] {.RlCbPragma.}
   var rlCb: ReadLineCb
   proc setReadLine*(f: ReadLineCb) =
     rlCb = f
 
-  when defined(nimPreviewSlimSystem):
-    import std/assertions
-  static:assert Nodejs == npythonJsAsyncReadline
-  when Nodejs:
+  when npythonJsAsyncReadline:
     import pkg/jscompat/utils/asyncIfJs/js
+  when Nodejs:
     import std/[jsffi, jsconsole]
     import pkg/nimpatch/destroyPatch
 
@@ -109,7 +108,7 @@ when defined(js):
             reject(e)
         )
 
-    proc readLineFromStdinAsync(ps: cstring): cstring{.async.} =
+    proc readLineFromStdinAsync(ps: cstring): cstring{.async, RlCbPragma.} =
       let res = await rl.obj.questionHandledEof ps
       assert res.isNil.not
       res
@@ -121,7 +120,7 @@ when defined(js):
     when not (defined(deno) or defined(jspure)):
       import std/jsffi
       import ../jsFile
-    proc readLineFromStdin(ps: cstring): cstring =
+    proc readLineFromStdin(ps: cstring): cstring {.RlCbPragma.} =
       when defined(deno):
         # XXX: deno's prompt(ps) when ps is non-empty
         #   performs tty.clearline && readLineFromStdin(if ps.len==0:"" else: ps+" ")
@@ -150,7 +149,12 @@ when defined(js):
       if result.isNil:
         raise new EOFError
 
-    setReadLine readLineFromStdin
+    when npythonJsAsyncReadline:
+      proc readLineFromStdinAsync(ps: cstring): Promise[cstring] =
+        newPromise readLineFromStdin ps
+      setReadLine readLineFromStdinAsync
+    else:
+      setReadLine readLineFromStdin
 
   proc readLineFromStdinMayAsync*(ps: cstring): cstring{.mayAsync.} =
     mayAwait rlCb ps
