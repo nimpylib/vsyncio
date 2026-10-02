@@ -6,7 +6,10 @@
 
 import std/jsffi
 
-import pkg/jscompat/utils/jsencodings
+import pkg/jscompat/utils/[
+  jsencodings, jsdataview, jstypedarrays,
+]
+import pkg/jscompat/npointer
 
 import ../private/jsbuf
 import ./iobase
@@ -72,6 +75,24 @@ method readChar*(f): char {.bIO.} =
   result = chr f.rbuf[f.rbufPos]
   inc f.rbufPos
 
+method readBuffer*(f; buffer: NPointer; len: Natural): int {.bIO.} =
+  try:
+    while result < len:
+      buffer.setUint8(result, cast[uint8](f.readChar()))
+      inc result
+  except EOFError:
+    discard
+
+method endOfFile*(f): bool {.raises: [].} =
+  try:
+    let c = f.readChar()
+    f.pushCharBack(c)
+  except EOFError:
+    return true
+  except IOError:
+    #XXX: Nim's std/syncio ignore endOfFile's IOError
+    return true
+
 method pushCharBack*(f; c: char) =
   f.hasPB = true
   f.pb = c
@@ -109,7 +130,7 @@ method readLine*(f): string {.bIO.} =
         raise
       return
 
-proc write(f; buf: TypedArray[uint8, auto]) =
+proc write(f; buf: TypedArray[uint8, auto]): int =
   if buf.len == 0: return
   f.discardRbuf()
   let total = buf.length
@@ -122,15 +143,22 @@ proc write(f; buf: TypedArray[uint8, auto]) =
       written += w
   if not f.raw.append:
     f.basePos += int64(written)
+  result = written.int
 
 method write*(f; c: char) {.bIO.} =
   let a = newUint8Array(1)
   a[0] = cast[uint8](c)
-  f.write a
+  discard f.write(a)
 method write*(f; s: string) {.bIO.} =
-  f.write toUint8Array(s)
+  discard f.write(toUint8Array(s))
 method write*(f; s: cstring) {.bIO.} =
-  f.write newTextEncoder().encode(s)
+  discard f.write(newTextEncoder().encode(s))
+
+method writeBuffer*(f; buffer: NPointer; len: Natural): int {.bIO.} =
+  buffer.asDataViewIt:
+    assert len <= it.len
+    let data = newUint8Array(it.buffer, 0, cint len)
+    result = f.write(data)
 
 method writeLine*(f; s: string) {.bIO.} =
   f.write s
@@ -154,4 +182,3 @@ method flushFile*(f) {.raises: [].} =
 
 method close*(f) {.raises: [].} =
   f.raw.close()
-

@@ -2,6 +2,7 @@
 ## Root of the file IO hierarchy, mirroring Python's `io.IOBase`.
 import std/macros
 import pkg/handy_sugars/assumes
+from pkg/jscompat/npointer import NPointer
 
 type
   FileHandle* = distinct cint
@@ -28,9 +29,11 @@ method isatty*(f): bool {.
   notImplBase: [].}  ## EXT. like isatty in std/terminal
 method getFileHandle*(f): FileHandle {.notImplBase: [].}
 method flushFile*(f) {.notImplBase: [].}
+method endOfFile*(f): bool {.notImplBase: [].}
 method close*(f) {.notImplBase: [].}
 
 method readChar*(f): char {.ionotImplBase.}
+method readBuffer*(f; buffer: NPointer; len: Natural): int {.ionotImplBase.}
 method readAll*(f): string {.ionotImplBase.}
 method readLine*(f): string {.ionotImplBase.}
 
@@ -38,10 +41,10 @@ method readLine*(f): string {.ionotImplBase.}
 method write*(f; c: char) {.ionotImplBase.}
 method write*(f; s: string) {.ionotImplBase.}
 method write*(f; s: cstring) {.ionotImplBase.}
+method writeBuffer*(f; buffer: NPointer; len: Natural): int {.ionotImplBase.}
 
 method writeLine*(f; s: string) {.ionotImplBase.}
 
 method getFilePos*(f): int64 {.ionotImplBase.}
 method setFilePos*(f; pos: int64,
     rel: FileSeekPos = fspSet) {.ionotImplBase.}
-

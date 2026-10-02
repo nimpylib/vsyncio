@@ -34,7 +34,7 @@ proc newFileIO*(fd: FileHandle, seekable: bool, name: string,
   FileIO(fd: fd, denoFile: denoFile, isDenoFile: isDenoFile, seekable: seekable,
     name: name, writable: writable, append: append)
 
-proc readBuffer*(f: RawIOBase, buf: TypedArray[uint8, ArrayBuffer], pos: int64): cint =
+proc readBuffer*(f: RawIOBase, buf: TypedArray[uint8, auto], pos: int64): cint =
   jsTryAsIOError:
     if f.isDenoFile:
       if f.seekable:
@@ -46,7 +46,7 @@ proc readBuffer*(f: RawIOBase, buf: TypedArray[uint8, ArrayBuffer], pos: int64):
       else:
         result = fsReadSync(f.fd.cint, buf, 0, buf.length)
 
-proc writeBuffer*(f: RawIOBase, buf: TypedArray[uint8, ArrayBuffer],
+proc writeBuffer*(f: RawIOBase, buf: TypedArray[uint8, auto],
     offset, len: cint, pos: int64): cint =
   jsTryAsIOError:
     if f.isDenoFile:
