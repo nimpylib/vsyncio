@@ -10,8 +10,11 @@ type
   StdioFile* = ref object of BufferedIOBase
     lineBuf: string
 
-proc nodeStdoutWrite(s: cstring) {.importjs: "process.stdout.write(#)".}
-proc nodeStderrWrite(s: cstring) {.importjs: "process.stderr.write(#)".}
+template impProcessStdio(R, stdout, write) {.dirty.} =
+  proc `process stdout write`(s: cstring): R {.importjs:
+    "process." & astToStr(stdout) & '.' & astToStr(write) & "(#)".}
+impProcessStdio void, stdout, write
+impProcessStdio void, stderr, write
 
 template processOr(ifDo, elseDo) =
   when defined(nodejs): ifDo
@@ -47,8 +50,8 @@ template stdoutOrStderr(f, outDo, errDo) =
 method write*(f: StdioFile, s: cstring) =
   processOr:
     f.stdoutOrStderr(
-      nodeStdoutWrite(s),
-      nodeStderrWrite(s)
+      processStdoutWrite(s),
+      processStderrWrite(s)
     )
   do: bufferedWrite(f, s)
 
