@@ -59,7 +59,7 @@ proc writeBuffer*(f: RawIOBase, buf: TypedArray[uint8, auto],
       else:
         result = fsWriteSync(f.fd.cint, buf, offset, len)
 
-proc getFileSize*(f: RawIOBase): int64 =
+method getFileSize*(f: RawIOBase): int64 =
   jsTryAsIOError:
     if f.isDenoFile:
       result = int64(denoSeekSync(f.denoFile, 0, 2))

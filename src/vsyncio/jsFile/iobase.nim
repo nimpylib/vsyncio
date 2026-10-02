@@ -48,3 +48,5 @@ method writeLine*(f; s: string) {.ionotImplBase.}
 method getFilePos*(f): int64 {.ionotImplBase.}
 method setFilePos*(f; pos: int64,
     rel: FileSeekPos = fspSet) {.ionotImplBase.}
+method getFileSize*(f): int64 {.ionotImplBase.}
+

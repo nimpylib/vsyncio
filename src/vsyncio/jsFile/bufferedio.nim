@@ -177,6 +177,8 @@ method setFilePos*(f; pos: int64,
   of fspEnd:
     f.basePos = f.raw.getFileSize() + pos
 
+method getFileSize*(f): int64 =
+  f.raw.getFileSize
 method flushFile*(f) {.raises: [].} =
   f.raw.flushFile()
 
