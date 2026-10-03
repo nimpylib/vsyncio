@@ -31,10 +31,9 @@ proc open*(f: var File, p: string, mode: FileMode = fmRead): bool =
       setErrnoRaw(denoErrno($errName))
       return false
     if denoFile.isNull or denoFile.isUndefined: return false
-    f = BufferedIOBase(raw: newFileIO(FileHandle -1, seekable = true, name = p,
+    f = BufferedIOBase(raw: newDenoFileIO(denoFile, seekable = true, name = p,
       writable = mode in {fmWrite, fmAppend, fmReadWriteExisting, fmReadWrite},
-      append = mode == fmAppend,
-      denoFile = denoFile, isDenoFile = true))
+      append = mode == fmAppend))
     return true
   var fd: cint = -1
   catchJsErrAndSetErrno:

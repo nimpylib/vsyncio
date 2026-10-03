@@ -6,7 +6,7 @@ from ./private/helpers import jsExpr
 from ./open/decl import File
 import ./stdio
 import ./bufferedio
-from ./rawio import newFileIO
+from ./rawio import newFileIO, newDenoFileIO
 
 type FileHandle = stdio.FileHandle  # shadow system's syncio.FileHandle
 type File = decl.File  # shadow system's syncio.File
@@ -26,9 +26,9 @@ proc newStdFile(name: string, filehandle: int, mode: FileMode): File =
       of 2: jsExpr"Deno.stderr"
       else:
         unreachable
-    StdioFile(raw: newFileIO(FileHandle filehandle, seekable = false, name = name,
+    StdioFile(raw: newDenoFileIO(denoFile, seekable = false, name = name,
       writable = mode != fmRead, append = mode == fmAppend,
-      denoFile = denoFile, isDenoFile = true))
+      fd = FileHandle filehandle))
   else:
     new[StdioFile](name, filehandle, mode)
 
