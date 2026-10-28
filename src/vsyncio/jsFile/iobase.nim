@@ -23,7 +23,9 @@ macro ionotImplBase(def) =
   notImplBaseImpl parseExpr"[IOError]", def
 
 {.hint[XCannotRaiseY]: off.}
-method initBufAsPy*(f; buf: int) {.raises: [IOError].} = discard ## EXT.
+method initBufAsPy*(f; buf: int) {.base, raises: [IOError, ValueError].} =
+  ## EXT.
+  discard
 method pushCharBack*(f; c: char) {.ionotImplBase.} ## \
 ## EXT. for impl for peekChar
 method isatty*(f): bool {.
