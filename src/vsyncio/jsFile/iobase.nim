@@ -23,7 +23,7 @@ macro ionotImplBase(def) =
   notImplBaseImpl parseExpr"[IOError]", def
 
 {.hint[XCannotRaiseY]: off.}
-method pushCharBack*(f; c: char) {.notImplBase: [].} ## \
+method pushCharBack*(f; c: char) {.ionotImplBase.} ## \
 ## EXT. for impl for peekChar
 method isatty*(f): bool {.
   notImplBase: [].}  ## EXT. like isatty in std/terminal
