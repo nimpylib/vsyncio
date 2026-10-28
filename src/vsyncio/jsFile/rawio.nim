@@ -7,6 +7,7 @@
 import std/jsffi
 
 import pkg/handy_sugars/assumes
+import pkg/pyerrors/oserr
 
 import ../private/jsutils
 import ./private/helpers
@@ -18,6 +19,7 @@ type
   RawIOBase* = ref object of IOBase
     name*: string
     fd*: FileHandle
+    closed: bool
     seekable*: bool
     writable*: bool
     append*: bool
@@ -90,29 +92,43 @@ method getFileSize*(f: DenoFileIO): int64 =
   jsTryAsIOError:
     result = int64(denoSeekSync(f.denoFile, 0, 2))
 
-method flushFile*(f: NodeFileIO) {.raises: [].} =
-  if not f.seekable or f.writable:
-    jsTryDiscard:
-      fsFsyncSync(f.fd.cint)
-
-method flushFile*(f: DenoFileIO) {.raises: [].} =
-  if f.seekable:
-    if f.writable:
+template genFlush(flushFile, jsTryDiscard, jsTryDiscardDeno) {.dirty.} =
+  method flushFile*(f: NodeFileIO) =
+    if not f.seekable or f.writable:
       jsTryDiscard:
-        denoSync(f.denoFile)
-  else:
-    jsTryDiscard:
-      denoSyncIfSupported(f.denoFile)
+        fsFsyncSync(f.fd.cint)
+
+  method flushFile*(f: DenoFileIO) =
+    if f.seekable:
+      if f.writable:
+        jsTryDiscardDeno:
+          denoSync(f.denoFile)
+    else:
+      jsTryDiscardDeno:
+        denoSyncIfSupported(f.denoFile)
+genFlush flushFile, jsTryDiscard, jsTryDiscard
+template jsTryAndCatchPlainOSErr(body) =
+  jsTryAsError OSError, body
+genFlush flush, catchJsErrAndRaise, jsTryAndCatchPlainOSErr
+
+template withClosed(f; body) {.dirty.} =
+  if f.closed: return  # never close closed. reentrant
+  jsTryDiscard:
+    body
+  f.closed = true
 
 method close*(f: NodeFileIO) {.raises: [].} =
-  if f.fd.cint < 0: return  # never close closed. reentrant
-  jsTryDiscard:
+  # we shall not set f.fd to -1 as we need
+  #   node to raise error with EBADF errno when acting on closed file
+  # otherwise, a
+  #   `RangeError: The value of "fd" is out of range. It must be >= 0 && <= 2147483647. Received -1`
+  #   will be thrown
+  f.withClosed:
     fsCloseSync(f.fd.cint)
-  f.fd = FileHandle -1
 
 method close*(f: DenoFileIO) {.raises: [].} =
-  if f.denoFile.isUndefined: return
-  jsTryDiscard:
+  # we shall not set f.denoFile to jsUndefined as we need
+  #   with the same reason above.
+  f.withClosed:
     denoClose(f.denoFile)
-  f.denoFile = jsUndefined
-  f.fd = FileHandle -1
+

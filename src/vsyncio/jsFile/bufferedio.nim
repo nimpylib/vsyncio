@@ -179,8 +179,10 @@ method setFilePos*(f; pos: int64,
 
 method getFileSize*(f): int64 =
   f.raw.getFileSize
-method flushFile*(f) {.raises: [].} =
-  f.raw.flushFile()
+template gen(flushFile) {.dirty.} =
+  method flushFile*(f) =
+    f.raw.flushFile()
+gen flushFile
+gen flush
+gen close
 
-method close*(f) {.raises: [].} =
-  f.raw.close()

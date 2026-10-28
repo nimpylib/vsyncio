@@ -28,9 +28,10 @@ method pushCharBack*(f; c: char) {.notImplBase: [].} ## \
 method isatty*(f): bool {.
   notImplBase: [].}  ## EXT. like isatty in std/terminal
 method getFileHandle*(f): FileHandle {.notImplBase: [].}
-method flushFile*(f) {.notImplBase: [].}
 method endOfFile*(f): bool {.notImplBase: [].}
 method close*(f) {.notImplBase: [].}
+method flushFile*(f) {.notImplBase: [].}
+method flush*(f) {.notImplBase: [OSError].}  ## EXT.
 
 method readChar*(f): char {.ionotImplBase.}
 method readBuffer*(f; buffer: NPointer; len: Natural): int {.ionotImplBase.}
