@@ -10,6 +10,9 @@ type
   StdioFile* = ref object of BufferedIOBase
     lineBuf: string
 
+method initBufAsPy*(f: StdioFile; buf: int) =
+  raise newException(ValueError, "setbuf for StdioFile not impl")
+
 template impProcessStdio(R, stdout, write) {.dirty.} =
   proc `process stdout write`(s: cstring): R {.importjs:
     "process." & astToStr(stdout) & '.' & astToStr(write) & "(#)".}

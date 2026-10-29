@@ -25,7 +25,7 @@ macro ionotImplBase(def) =
 {.hint[XCannotRaiseY]: off.}
 method initBufAsPy*(f; buf: int) {.base, raises: [IOError, ValueError].} =
   ## EXT.
-  discard
+  unreachable
 method pushCharBack*(f; c: char) {.ionotImplBase.} ## \
 ## EXT. for impl for peekChar
 method isatty*(f): bool {.

@@ -46,6 +46,8 @@ proc newDenoFileIO*(denoFile: JsObject, seekable: bool, name: string,
   DenoFileIO(fd: fd, denoFile: denoFile, seekable: seekable,
     name: name, writable: writable, append: append)
 
+method initBufAsPy*(f: RawIOBase; buf: int) =
+  raise newException(ValueError, "cannot setbuf for raw IO")
 # Use JsObject for buffers so dispatch stays non-generic for both ordinary
 # and shared Uint8Array buffers.
 method readBuffer*(f: RawIOBase, buf: JsObject, pos: int64): cint {.base, raises: [IOError].} =

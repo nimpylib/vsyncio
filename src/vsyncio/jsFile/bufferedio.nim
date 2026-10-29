@@ -25,16 +25,31 @@ const JS_READ_BUF_SIZE = 8192
 type
   BufferedIOBase* = ref object of IOBase
     raw*: RawIOBase
+    bufLen = JS_READ_BUF_SIZE.cint
     basePos: int64  # pos when read-buffer is inactive
     # read-buffer, used for getFilePos consistency
     rbuf: TypedArray[uint8, ArrayBuffer]
     rbufValid: bool
-    rbufLen: cint
+    rbufLen: cint  ## bytes read currently
     rbufPos: cint
     rbufStart: int64
     # 1-char pushback, used by `pyio_open.peekChar`
     hasPB: bool
     pb: char
+
+proc new*[F: BufferedIOBase](raw: RawIOBase): F =
+  F(raw: raw)
+
+method initBufAsPy*(f: BufferedIOBase; buf: int) =
+  case buf
+  of 0:
+    raise newException(ValueError, "buffer size cannot be 0 for BufferedIOBase")
+  of 1:
+    raise newException(ValueError,
+      "BufferedIOBase doesn't support line_buffering where buffering == 1")
+  elif buf < 0: return # use default
+  else:
+    f.bufLen = buf
 
 method getFileHandle*(f: BufferedIOBase): FileHandle {.raises: [].} =
   IOBase(f.raw).getFileHandle()
@@ -54,7 +69,7 @@ method getFilePos*(f): int64 =
 
 proc fillRbuf(f): bool {.raises: [IOError].} =
   if not f.rbufValid:
-    f.rbuf = newUint8Array(JS_READ_BUF_SIZE.cint)
+    f.rbuf = newUint8Array(f.bufLen)
     f.rbufValid = true
   let n = f.raw.readBuffer(f.rbuf, f.basePos)
   if n <= 0: return false
