@@ -1,13 +1,13 @@
 
 import pkg/jscompat/utils/deno
-import ../[stdios, bufferedio]
+import ../[stdios, bufferedio, rawio]
 include ./comm
 
 template DenoNoFdHint = discard
 # Deno does not allow opening arbitrary file descriptors.
 
 proc open*(f: var File, filehandle: FileHandle,
-    mode: FileMode = fmRead): bool =
+    mode: FileMode = fmRead; buffering = -1): bool =
   let fd = filehandle.cint
   if fd < 0: return false
   template retf(tf) =
@@ -23,6 +23,10 @@ proc open*(f: var File, filehandle: FileHandle,
     return false
   else:
     let name = "<fd " & $fd & ">"
-    f = new[BufferedIOBase](name, filehandle, mode)
+    if buffering == 0:
+      f = newFileIO(filehandle, name, mode, seekable = true) #TODO:seekable
+    else:
+      f = new[BufferedIOBase](name, filehandle, mode)
+      f.initBufAsPy buffering
     return true
 

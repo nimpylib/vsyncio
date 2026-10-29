@@ -35,16 +35,18 @@ method getDenoFile*(f: RawIOBase): tuple[f: JsObject, useDeno: bool] {.base, rai
 method getDenoFile*(f: DenoFileIO): tuple[f: JsObject, useDeno: bool] {.raises: [].} =
   (f.denoFile, true)
 
-proc newFileIO*(fd: FileHandle, seekable: bool, name: string,
-    writable, append: bool): FileIO =
+proc newFileIO*(fd: FileHandle, name: string, mode: FileMode, seekable: bool,
+    ): FileIO =
   ## For NodeJs backend. As Deno doesn't has file handle API since v2
   NodeFileIO(fd: fd, seekable: seekable, name: name,
-    writable: writable, append: append)
+    writable: mode != fmRead, append: mode == fmAppend)
 
-proc newDenoFileIO*(denoFile: JsObject, seekable: bool, name: string,
-    writable, append: bool, fd = FileHandle(-1)): FileIO =
+proc newDenoFileIO*(denoFile: JsObject,
+    name: string, mode: FileMode, seekable: bool,
+    fd = FileHandle(-1)): FileIO =
   DenoFileIO(fd: fd, denoFile: denoFile, seekable: seekable,
-    name: name, writable: writable, append: append)
+    name: name,
+    writable: mode != fmRead, append: mode == fmAppend)
 
 method initBufAsPy*(f: RawIOBase; buf: int) =
   raise newException(ValueError, "cannot setbuf for raw IO")

@@ -16,7 +16,8 @@ const jsPrivOpenFlags: array[FileMode, cstring] = [
   cstring"r", cstring"w", cstring"w+", cstring"r+", cstring"a"
 ]
 
-proc open*(f: var File, p: string, mode: FileMode = fmRead): bool =
+proc open*(f: var File, p: string, mode: FileMode = fmRead, buffering = -1): bool =
+  var raw: RawIOBase
   if inDeno:
     var denoFile: JsObject
     var failed = false
@@ -31,20 +32,21 @@ proc open*(f: var File, p: string, mode: FileMode = fmRead): bool =
       setErrnoRaw(denoErrno($errName))
       return false
     if denoFile.isNull or denoFile.isUndefined: return false
-    f = BufferedIOBase(raw: newDenoFileIO(denoFile, seekable = true, name = p,
-      writable = mode in {fmWrite, fmAppend, fmReadWriteExisting, fmReadWrite},
-      append = mode == fmAppend))
-    return true
-  var fd: cint = -1
-  catchJsErrAndSetErrno:
-    fd = fsOpenSync(cstring p, jsPrivOpenFlags[mode])
-  if fd < 0: return false
-  f = BufferedIOBase(raw: newFileIO(FileHandle fd, seekable = true, name = p,
-    writable = mode in {fmWrite, fmAppend, fmReadWriteExisting, fmReadWrite},
-    append = mode == fmAppend))
+    raw = newDenoFileIO(denoFile, p, mode, seekable = true)
+  else:
+    var fd: cint = -1
+    catchJsErrAndSetErrno:
+      fd = fsOpenSync(cstring p, jsPrivOpenFlags[mode])
+    if fd < 0: return false
+    raw = newFileIO(FileHandle fd, p, mode, seekable = true)
+  if buffering == 0:
+    f = raw
+  else:
+    f = new[BufferedIOBase](raw)
+    f.initBufAsPy buffering
   result = true
 
 proc open*(filename: string,
-            mode: FileMode = fmRead): File =
-  if not open(result, filename, mode):
+            mode: FileMode = fmRead, buffering = -1): File =
+  if not open(result, filename, mode, buffering):
     raise newException(IOError, "cannot open: " & filename)

@@ -15,8 +15,7 @@ var stdin*, stdout*, stderr*: File
 
 proc new*[F: BufferedIOBase](name: string, filehandle: int|FileHandle, mode: FileMode;
                    seekable = when F is StdioFile: false else: true): F =
-  F(raw: newFileIO(FileHandle filehandle, seekable, name,
-    writable = mode != fmRead, append = mode == fmAppend))
+  new[F](newFileIO(FileHandle filehandle, name, mode, seekable))
 
 proc newStdFile(name: string, filehandle: int, mode: FileMode): File =
   if inDeno:
@@ -26,8 +25,7 @@ proc newStdFile(name: string, filehandle: int, mode: FileMode): File =
       of 2: jsExpr"Deno.stderr"
       else:
         unreachable
-    StdioFile(raw: newDenoFileIO(denoFile, seekable = false, name = name,
-      writable = mode != fmRead, append = mode == fmAppend,
+    new[StdioFile](newDenoFileIO(denoFile, name, mode, seekable = false,
       fd = FileHandle filehandle))
   else:
     new[StdioFile](name, filehandle, mode)
