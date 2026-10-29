@@ -5,18 +5,15 @@ import vsyncio as nio
 import vsyncio/extraMeth/m_flush
 
 import ./utils
-const filename =
-  "tempfiletest_fileio"
 
 template writeF(f) {.dirty.} =
-    var f = nio.open(filename, fmWrite)
-    defer:removeFile(filename)
-    f.write("test")
-block:
-    writeF(f)
-    f.close()
-    f.flush()
+  writeFileAs f, "test"
+suite "flush stdio":
+  test "stdout":
+    nio.stdout.flush()
 suite "flush":
+  tearDown:
+    removeFile(filename)
   test "normal":
     writeF(f)
     f.flush()

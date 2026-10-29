@@ -12,3 +12,10 @@ else:
 
 export removeFile
 
+const filename* =
+  "tempfiletest"
+template writeFileAs*(f; s) {.dirty.} =
+  bind filename
+  var f = nio.open(filename, fmWrite)
+  f.write(s)
+

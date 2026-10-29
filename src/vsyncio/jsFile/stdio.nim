@@ -10,6 +10,10 @@ type
   StdioFile* = ref object of BufferedIOBase
     lineBuf: string
 
+method flush*(f: StdioFile) =
+  #TODO:flush
+  discard  # currently rawio.flush uses fsync
+  # which cannot perform on stdio
 method initBufAsPy*(f: StdioFile; buf: int) =
   raise newException(ValueError, "setbuf for StdioFile not impl")
 
