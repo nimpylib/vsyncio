@@ -9,7 +9,7 @@ import std/jsffi
 import pkg/handy_sugars/assumes
 import pkg/pyerrors/oserr
 
-import ../private/jsutils
+import ../private/[jsutils, consts]
 import ./private/helpers
 import ./iobase
 
@@ -97,24 +97,16 @@ method getFileSize*(f: DenoFileIO): int64 =
   jsTryAsIOError:
     result = int64(denoSeekSync(f.denoFile, 0, 2))
 
-template genFlush(flushFile, jsTryDiscard, jsTryDiscardDeno) {.dirty.} =
+template flushImpl =
+  if f.closed:
+    raise newException(IOError, ioOnClosedErrMsg)
+template genFlush(flushFile) {.dirty.} =
   method flushFile*(f: NodeFileIO) =
-    if not f.seekable or f.writable:
-      jsTryDiscard:
-        fsFsyncSync(f.fd.cint)
+    flushImpl
 
   method flushFile*(f: DenoFileIO) =
-    if f.seekable:
-      if f.writable:
-        jsTryDiscardDeno:
-          denoSync(f.denoFile)
-    else:
-      jsTryDiscardDeno:
-        denoSyncIfSupported(f.denoFile)
-genFlush flushFile, jsTryDiscard, jsTryDiscard
-template jsTryAndCatchPlainOSErr(body) =
-  jsTryAsError OSError, body
-genFlush flush, catchJsErrAndRaise, jsTryAndCatchPlainOSErr
+    flushImpl
+genFlush flush
 
 template withClosed(f; body) {.dirty.} =
   if f.closed: return  # never close closed. reentrant

@@ -33,12 +33,12 @@ method isatty*(f): bool {.
 method getFileHandle*(f): FileHandle {.notImplBase: [].}
 method endOfFile*(f): bool {.notImplBase: [].}
 method close*(f) {.notImplBase: [].}
-method flush*(f) {.notImplBase: [OSError].}  ## EXT. \
+method flush*(f) {.ionotImplBase.}  ## EXT. \
   ## however, flushFile has default implementation using this,
   ##   while this method must be implemented.
-method flushFile*(f) {.base.} =
+method flushFile*(f) {.base, raises: [].} =
   try: f.flush()
-  except OSError: discard
+  except IOError: discard
 
 method readChar*(f): char {.ionotImplBase.}
 method readBuffer*(f; buffer: NPointer; len: Natural): int {.ionotImplBase.}

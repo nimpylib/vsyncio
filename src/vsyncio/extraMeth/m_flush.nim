@@ -4,10 +4,12 @@ when defined(js):
   export flush
 else:
   import pkg/pyerrors/oserr
-  proc flush*(f: syncio.File) {.raises: [OSError].} =
+  import pkg/errno
+  proc flush*(f: syncio.File) {.raises: [IOError].} =
     proc c_fflush(f: syncio.File): cint {.cdecl,
       importc: "fflush", header: "<stdio.h>".}
     let ret = c_fflush(f)
     if ret != 0:
-      raiseErrno()
+      #XXX: maybe we shall use raiseErrno?
+      raise newException(IOError, strerror(getErrno()))
 

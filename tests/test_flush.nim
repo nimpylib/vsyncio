@@ -21,6 +21,6 @@ suite "flush":
   test "after closed":
     writeF(f)
     f.close()
-    expect OSError:
+    expect IOError:
       f.flush()
 
