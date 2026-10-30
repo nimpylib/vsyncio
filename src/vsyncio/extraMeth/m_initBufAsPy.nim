@@ -1,10 +1,13 @@
 
+import ../private/consts
 when defined(js):
   import ../jsFile as fileobj_js
   export initBufAsPy
 else:
   import pkg/handy_sugars/assumes
   import pkg/errno
+  from pkg/pyerrors/oserr import errnoMsg
+  import ../private/consts
 
   {.push header: "<stdio.h>".}
   proc c_setvbuf(f: syncio.File, buf: pointer, mode: cint, size: csize_t): cint {.
@@ -34,10 +37,9 @@ else:
     if ret != 0:
       if isErr EINVAL:
         # e.g. windows only allows range: 2 <= size <= INT_MAX
-        proc c_strerror(e: cint): cstring {.importc: "strerror", header: "<errno.h>".}
-        raise newException(ValueError, $c_strerror(EINVAL))
+        raise newException(ValueError, errnoMsg(EINVAL))
       elif isErr EBADF:
         # POSIX indiates such errno
-        raise newException(ValueError, "I/O operation on closed file.")
+        raise newException(IOError, ioOnClosedErrMsg)
       raise newException(IOError, "setvbuf failed")
 

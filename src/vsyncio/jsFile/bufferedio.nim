@@ -46,7 +46,7 @@ method initBufAsPy*(f: BufferedIOBase; buf: int) =
     raise newException(ValueError, "buffer size cannot be 0 for BufferedIOBase")
   of 1:
     raise newException(ValueError,
-      "BufferedIOBase doesn't support line_buffering where buffering == 1")
+      "BufferedIOBase: " & nonTextNoLineBuffering)
   elif buf < 0: return # use default
   else:
     f.bufLen = buf
