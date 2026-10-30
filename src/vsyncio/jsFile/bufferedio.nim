@@ -2,7 +2,10 @@
 ## `io.BufferedReader`, `io.BufferedWriter`, `io.BufferedRandom` subclasses.
 ##
 ## A buffered stream wraps a raw `RawIOBase` and tracks the logical position
-## (`basePos`) itself, reading/writing it in `JS_READ_BUF_SIZE` chunks.
+## (`basePos`) itself, reading/writing it in `buffering` chunks;
+## reads are served from `rbuf` (refilled from `raw`), writes go into `wbuf`
+## and are written out to `raw` once they fill it up, 
+## or on `flush`/`setFilePos`/`close`.
 
 import std/jsffi
 
@@ -18,14 +21,14 @@ import ./rawio
 export iobase.FileHandle
 type FileHandle = iobase.FileHandle  # shadow system's syncio.FileHandle
 
-const JS_READ_BUF_SIZE = 8192
+const JS_BUF_SIZE = 8192
 
 {.pragma: bIO, raises: [IOError].}
 
 type
   BufferedIOBase* = ref object of IOBase
     raw*: RawIOBase
-    bufLen = JS_READ_BUF_SIZE.cint
+    bufLen = JS_BUF_SIZE.cint
     basePos: int64  # pos when read-buffer is inactive
     # read-buffer, used for getFilePos consistency
     rbuf: TypedArray[uint8, ArrayBuffer]
@@ -33,6 +36,9 @@ type
     rbufLen: cint  ## bytes read currently
     rbufPos: cint
     rbufStart: int64
+    # write-buffer, holding pending write data until filled or flushed
+    wbuf: TypedArray[uint8, ArrayBuffer]
+    wbufLen: cint  ## bytes pending in `wbuf`
     # 1-char pushback, used by `pyio_open.peekChar`
     hasPB: bool
     pb: char
@@ -65,9 +71,22 @@ proc discardRbuf(f) =
 
 method getFilePos*(f): int64 =
   if f.rbufValid: f.rbufStart + int64(f.rbufPos)
-  else: f.basePos
+  else: f.basePos + int64(f.wbufLen)
 
-proc fillRbuf(f): bool {.raises: [IOError].} =
+proc flushWbuf(f) {.raises: [IOError].} =
+  ## write out the pending data held in `wbuf` and reset it
+  if f.wbufLen <= 0: return
+  var written: cint = 0
+  while written < f.wbufLen:
+    let w = f.raw.writeBuffer(f.wbuf, written, f.wbufLen - written,
+      f.basePos + int64(written))
+    if w <= 0: break
+    inc written, w
+  if not f.raw.append:
+    f.basePos += int64(f.wbufLen)
+  f.wbufLen = 0
+
+proc fillRbufImpl(f): bool =
   if not f.rbufValid:
     f.rbuf = newUint8Array(f.bufLen)
     f.rbufValid = true
@@ -78,6 +97,10 @@ proc fillRbuf(f): bool {.raises: [IOError].} =
   f.rbufPos = 0
   f.basePos += int64(n)
   result = true
+
+template fillRbuf(f): bool =
+  f.flushWbuf()  # like std/syncio, reading flushes the pending writes
+  f.fillRbufImpl()
 
 method readChar*(f): char {.bIO.} =
   if f.hasPB:
@@ -152,18 +175,34 @@ proc write(f; buf: TypedArray[uint8, auto]): int =
   var written: cint = 0
   block writeBlock:
     while written < total:
-      let w = f.raw.writeBuffer(buf, written, total - written,
-        f.basePos + int64(written))
-      if w <= 0: break writeBlock
-      written += w
-  if not f.raw.append:
-    f.basePos += int64(written)
+      let remain = total - written
+      if f.wbufLen == 0 and remain >= f.bufLen:
+        # bypass the buffer for data capable to fill it wholly,
+        #   like CPython's BufferedWriter does
+        let w = f.raw.writeBuffer(buf, written, remain, f.basePos)
+        if w == 0: break writeBlock
+        inc written, w
+        if not f.raw.append:
+          f.basePos += int64(w)
+      else:
+        if f.wbuf.isNil:
+          f.wbuf = newUint8Array(f.bufLen)
+        let chunk = min(remain, f.bufLen - f.wbufLen)
+        f.wbuf.set(buf.subarray(written, written + chunk), f.wbufLen)
+        inc written, chunk
+        inc f.wbufLen, chunk
+        if f.wbufLen == f.bufLen:
+          f.flushWbuf()
   result = written.int
 
 method write*(f; c: char) {.bIO.} =
-  let a = newUint8Array(1)
-  a[0] = cast[uint8](c)
-  discard f.write(a)
+  f.discardRbuf()
+  if f.wbuf.isNil:
+    f.wbuf = newUint8Array(f.bufLen)
+  f.wbuf[f.wbufLen] = cast[uint8](c)
+  inc f.wbufLen
+  if f.wbufLen == f.bufLen:
+    f.flushWbuf()
 method write*(f; s: string) {.bIO.} =
   discard f.write(toUint8Array(s))
 method write*(f; s: cstring) {.bIO.} =
@@ -183,6 +222,7 @@ method setFilePos*(f; pos: int64,
     rel: FileSeekPos = fspSet) {.bIO.} =
   if not f.raw.seekable:
     raise newException(IOError, "cannot set file position")
+  f.flushWbuf()  # stranded pending data otherwise
   f.discardRbuf()
   case rel
   of fspSet:
@@ -193,11 +233,18 @@ method setFilePos*(f; pos: int64,
     f.basePos = f.raw.getFileSize() + pos
 
 method getFileSize*(f): int64 =
+  # flush so the buffered writes are accounted for
+  #   (they land before the size is measured)
+  f.flushWbuf()
   f.raw.getFileSize
-template gen(flushFile) {.dirty.} =
-  method flushFile*(f) =
-    f.raw.flushFile()
-gen flushFile
-gen flush
-gen close
+
+method flush*(f)  =
+  ## flush pending data.
+  f.flushWbuf()
+  f.raw.flush()
+
+method close*(f) {.raises: [].} =
+  # as std/syncio, `close` flushes first, swallowing errors
+  f.flushFile()
+  f.raw.close()
 
