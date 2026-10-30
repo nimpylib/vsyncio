@@ -21,7 +21,8 @@ proc denoOpenSync*(path: cstring, opts: JsObject): JsObject {.
 proc denoClose*(f: JsObject) {.importjs: "#.close()".}
 proc denoReadSync*(f, buf: JsObject): cint {.importjs: "(#.readSync(#) ?? 0)".}
 proc denoWriteSync*(f, buf: JsObject): cint {.importjs: "#.writeSync(#)".}
-proc denoBufSlice*(buf: JsObject, start: cint): JsObject {.importjs: "#.subarray(#)".}
+proc denoBufSliceToEnd*(buf: JsObject, start, `end`: cint): JsObject {.
+  importjs: "#.subarray(#, #)".}
 proc denoSeekSync*(f: JsObject, pos: cint, whence: cint): cint {.
   importjs: "#.seekSync(#, #)".}
 proc denoSync*(f: JsObject) {.importjs: "#.syncSync()".}

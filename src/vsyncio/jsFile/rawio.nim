@@ -86,7 +86,8 @@ method writeBuffer*(f: DenoFileIO, buf: JsObject,
   jsTryAsIOError:
     if f.seekable and not f.append:
       discard denoSeekSync(f.denoFile, cint(pos), 0)
-    result = denoWriteSync(f.denoFile, denoBufSlice(buf, offset))
+    result = denoWriteSync(f.denoFile,
+      denoBufSliceToEnd(buf, offset, offset + len))
 
 method getFileSize*(f: NodeFileIO): int64 =
   jsTryAsIOError:
