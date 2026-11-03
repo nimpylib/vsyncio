@@ -1,9 +1,7 @@
 
 
-when defined(js):
-  import ../jsFile as fileobj_js
-  export pushCharBack
-else:
+import ./private/utils
+gen pushCharBack:
   import pkg/pyerrors/oserr
   {.push header: "<stdio.h>".}
   let EOF{.importc.}: cint

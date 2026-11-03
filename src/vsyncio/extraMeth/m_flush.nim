@@ -1,8 +1,6 @@
 
-when defined(js):
-  import ../jsFile as fileobj_js
-  export flush
-else:
+import ./private/utils
+gen flush:
   import pkg/pyerrors/oserr
   import pkg/errno
   proc flush*(f: syncio.File) {.raises: [IOError].} =

@@ -1,9 +1,6 @@
 
-import ../private/consts
-when defined(js):
-  import ../jsFile as fileobj_js
-  export initBufAsPy
-else:
+import ./private/utils
+gen initBufAsPy:
   import pkg/handy_sugars/assumes
   import pkg/errno
   from pkg/pyerrors/oserr import errnoMsg

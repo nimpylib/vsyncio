@@ -10,6 +10,7 @@ import pkg/handy_sugars/assumes
 import pkg/jscompat/utils/[jstypedarrays, jsarraybuffer, ]
 
 import ../private/[jsutils, consts]
+import ../extra/isatty
 import ./private/[helpers, macros]
 import ./iobase
 
@@ -31,10 +32,11 @@ type
     denoFile: JsObject
 
 method getFileHandle*(f: FileIO): FileHandle {.raises: [].} = f.fd
-method getDenoFile*(f: RawIOBase): tuple[f: JsObject, useDeno: bool] {.base, raises: [].} =
-  (jsUndefined, false)
-method getDenoFile*(f: DenoFileIO): tuple[f: JsObject, useDeno: bool] {.raises: [].} =
-  (f.denoFile, true)
+
+method isatty*(f: FileIO): bool = isatty(f.fd.cint)
+
+method isatty*(f: DenoFileIO): bool =
+  f.denoFile.isTerminal().to bool
 
 method initBufAsPy*(f: RawIOBase; buf: int) =
   raise newException(ValueError, "cannot setbuf for raw IO")
