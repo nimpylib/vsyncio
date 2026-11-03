@@ -10,15 +10,15 @@
 import std/jsffi
 
 import pkg/jscompat/utils/[
-  jsencodings, jsdataview, jstypedarrays,
+  jsdataview, jstypedarrays,
 ]
-import pkg/jscompat/npointer
+
 
 import ../private/jsbuf
 import ./iobase
 import ./rawio
 
-export iobase.FileHandle
+export iobase
 type FileHandle = iobase.FileHandle  # shadow system's syncio.FileHandle
 
 const JS_BUF_SIZE = 8192
@@ -44,7 +44,7 @@ type
     pb: char
 
 proc new*[F: BufferedIOBase](raw: RawIOBase): F =
-  F(raw: raw)
+  F(raw: raw, basePos: raw.getFilePos())
 
 method initBufAsPy*(f: BufferedIOBase; buf: int) =
   case buf
@@ -76,21 +76,19 @@ method getFilePos*(f): int64 =
 proc flushWbuf(f) {.raises: [IOError].} =
   ## write out the pending data held in `wbuf` and reset it
   if f.wbufLen <= 0: return
-  var written: cint = 0
+  var written = 0
   while written < f.wbufLen:
-    let w = f.raw.writeBuffer(f.wbuf, written, f.wbufLen - written,
-      f.basePos + int64(written))
+    let w = f.raw.write(f.wbuf, written, f.wbufLen - written)
     if w <= 0: break
     inc written, w
-  if not f.raw.append:
-    f.basePos += int64(f.wbufLen)
+  f.basePos += int64(written)
   f.wbufLen = 0
 
-proc fillRbufImpl(f): bool =
+proc fillRbufImpl(f): bool {.raises: [IOError].} =
   if not f.rbufValid:
     f.rbuf = newUint8Array(f.bufLen)
     f.rbufValid = true
-  let n = f.raw.readBuffer(f.rbuf, f.basePos)
+  let n = f.raw.read(f.rbuf)
   if n <= 0: return false
   f.rbufStart = f.basePos
   f.rbufLen = n
@@ -113,23 +111,14 @@ method readChar*(f): char {.bIO.} =
   result = chr f.rbuf[f.rbufPos]
   inc f.rbufPos
 
-method readBuffer*(f; buffer: NPointer; len: Natural): int {.bIO.} =
+method read*(f; buffer: TypedArray[uint8, auto]): int {.bIO.} =
+  let len = buffer.len
   try:
     while result < len:
-      buffer.setUint8(result, cast[uint8](f.readChar()))
+      buffer[result] = cast[uint8](f.readChar())
       inc result
   except EOFError:
     discard
-
-method endOfFile*(f): bool {.raises: [].} =
-  try:
-    let c = f.readChar()
-    f.pushCharBack(c)
-  except EOFError:
-    return true
-  except IOError:
-    #XXX: Nim's std/syncio ignore endOfFile's IOError
-    return true
 
 method pushCharBack*(f; c: char) =
   f.hasPB = true
@@ -137,63 +126,42 @@ method pushCharBack*(f; c: char) =
   if f.rbufValid and f.rbufPos > 0:
     dec f.rbufPos
 
-proc readChars*(f; dst: var openArray[char], startIndex = 0): int =
-  var i = startIndex
-  while i < dst.len:
+method readChars*(f; dst: var openArray[char]): int =
+  while result < dst.len:
     try:
-      dst[i] = f.readChar()
+      dst[result] = f.readChar()
     except EOFError:
       break
-    inc i
-  result = i - startIndex
+    inc result
 
-method readAll*(f): string {.bIO.} =
-  var tmp: array[64 * 1024, char]
-  while true:
-    let n = f.readChars(tmp, 0)
-    if n <= 0: break
-    for i in 0..<n: result.add tmp[i]
-
-method readLine*(f): string {.bIO.} =
-  while true:
-    try:
-      let c = f.readChar()
-      if c == '\n':
-        if result.len > 0 and result[^1] == '\r':
-          result.setLen(result.len - 1)
-        return
-      result.add c
-    except EOFError:
-      if result.len == 0:
-        raise
-      return
-
-proc write(f; buf: TypedArray[uint8, auto]): int =
-  if buf.len == 0: return
+method write(f; buf: TypedArray[uint8, auto]): int =
+  let
+    offset = 0
+    len = buf.len
+  if len == 0: return
   f.discardRbuf()
-  let total = buf.length
-  var written: cint = 0
+  var noffset = offset
   block writeBlock:
-    while written < total:
-      let remain = total - written
+    while result < len:
+      let remain = len - result
       if f.wbufLen == 0 and remain >= f.bufLen:
         # bypass the buffer for data capable to fill it wholly,
         #   like CPython's BufferedWriter does
-        let w = f.raw.writeBuffer(buf, written, remain, f.basePos)
-        if w == 0: break writeBlock
-        inc written, w
-        if not f.raw.append:
-          f.basePos += int64(w)
+        let w = f.raw.write(buf, noffset, remain)
+        if w <= 0: break writeBlock
+        inc result, w
+        inc noffset, w
+        f.basePos += int64(w)
       else:
         if f.wbuf.isNil:
           f.wbuf = newUint8Array(f.bufLen)
         let chunk = min(remain, f.bufLen - f.wbufLen)
-        f.wbuf.set(buf.subarray(written, written + chunk), f.wbufLen)
-        inc written, chunk
+        f.wbuf.set(buf.subarray(noffset, noffset + chunk), f.wbufLen)
+        inc result, chunk
+        inc noffset, chunk
         inc f.wbufLen, chunk
         if f.wbufLen == f.bufLen:
           f.flushWbuf()
-  result = written.int
 
 method write*(f; c: char) {.bIO.} =
   f.discardRbuf()
@@ -203,34 +171,13 @@ method write*(f; c: char) {.bIO.} =
   inc f.wbufLen
   if f.wbufLen == f.bufLen:
     f.flushWbuf()
-method write*(f; s: string) {.bIO.} =
-  discard f.write(toUint8Array(s))
-method write*(f; s: cstring) {.bIO.} =
-  discard f.write(newTextEncoder().encode(s))
-
-method writeBuffer*(f; buffer: NPointer; len: Natural): int {.bIO.} =
-  buffer.asDataViewIt:
-    assert len <= it.len
-    let data = newUint8Array(it.buffer, 0, cint len)
-    result = f.write(data)
-
-method writeLine*(f; s: string) {.bIO.} =
-  f.write s
-  f.write "\p"
 
 method setFilePos*(f; pos: int64,
     rel: FileSeekPos = fspSet) {.bIO.} =
-  if not f.raw.seekable:
-    raise newException(IOError, "cannot set file position")
   f.flushWbuf()  # stranded pending data otherwise
   f.discardRbuf()
-  case rel
-  of fspSet:
-    f.basePos = pos
-  of fspCur:
-    f.basePos = f.basePos + pos
-  of fspEnd:
-    f.basePos = f.raw.getFileSize() + pos
+  f.raw.setFilePos(pos, rel)
+  f.basePos = f.raw.getFilePos()
 
 method getFileSize*(f): int64 =
   # flush so the buffered writes are accounted for

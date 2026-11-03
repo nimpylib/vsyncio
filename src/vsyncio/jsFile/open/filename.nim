@@ -32,13 +32,13 @@ proc open*(f: var File, p: string, mode: FileMode = fmRead, buffering = -1): boo
       setErrnoRaw(denoErrno($errName))
       return false
     if denoFile.isNull or denoFile.isUndefined: return false
-    raw = newDenoFileIO(denoFile, p, mode, seekable = true)
+    raw = newDenoFileIO(denoFile, p, mode)
   else:
     var fd: cint = -1
     catchJsErrAndSetErrno:
       fd = fsOpenSync(cstring p, jsPrivOpenFlags[mode])
     if fd < 0: return false
-    raw = newFileIO(FileHandle fd, p, mode, seekable = true)
+    raw = newFileIO(FileHandle fd, p, mode)
   if buffering == 0:
     f = raw
   else:

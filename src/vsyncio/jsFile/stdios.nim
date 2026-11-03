@@ -14,8 +14,8 @@ type File = decl.File  # shadow system's syncio.File
 var stdin*, stdout*, stderr*: File
 
 proc new*[F: BufferedIOBase](name: string, filehandle: int|FileHandle, mode: FileMode;
-                   seekable = when F is StdioFile: false else: true): F =
-  new[F](newFileIO(FileHandle filehandle, name, mode, seekable))
+    ): F =
+  new[F](newFileIO(FileHandle filehandle, name, mode))
 
 proc newStdFile(name: string, filehandle: int, mode: FileMode): File =
   if inDeno:
@@ -25,7 +25,7 @@ proc newStdFile(name: string, filehandle: int, mode: FileMode): File =
       of 2: jsExpr"Deno.stderr"
       else:
         unreachable
-    new[StdioFile](newDenoFileIO(denoFile, name, mode, seekable = false,
+    new[StdioFile](newDenoFileIO(denoFile, name, mode,
       fd = FileHandle filehandle))
   else:
     new[StdioFile](name, filehandle, mode)

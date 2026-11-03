@@ -24,7 +24,7 @@ proc open*(f: var File, filehandle: FileHandle,
   else:
     let name = "<fd " & $fd & ">"
     if buffering == 0:
-      f = newFileIO(filehandle, name, mode, seekable = true) #TODO:seekable
+      f = newFileIO(filehandle, name, mode)
     else:
       f = new[BufferedIOBase](name, filehandle, mode)
       f.initBufAsPy buffering
