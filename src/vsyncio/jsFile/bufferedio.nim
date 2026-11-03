@@ -14,6 +14,7 @@ import pkg/jscompat/utils/[
 ]
 
 
+import ./private/macros
 import ../private/jsbuf
 import ./iobase
 import ./rawio
@@ -111,7 +112,7 @@ method readChar*(f): char {.bIO.} =
   result = chr f.rbuf[f.rbufPos]
   inc f.rbufPos
 
-method read*(f; buffer: TypedArray[uint8, auto]): int {.bIO.} =
+method read*(f; buffer: TypedArray[uint8, auto]): int {.bIO, expBufInArr.} =
   let len = buffer.len
   try:
     while result < len:
@@ -134,7 +135,7 @@ method readChars*(f; dst: var openArray[char]): int =
       break
     inc result
 
-method write(f; buf: TypedArray[uint8, auto]): int =
+method write*(f; buf: TypedArray[uint8, auto]): int {.bIO, expBufInArr.} =
   let
     offset = 0
     len = buf.len

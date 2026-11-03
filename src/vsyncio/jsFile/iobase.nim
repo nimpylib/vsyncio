@@ -6,6 +6,7 @@ import pkg/jscompat/npointer
 import pkg/jscompat/utils/[
   jstypedarrays, jsdataview, jsencodings,
 ]
+import ./private/macros
 import ../private/jsbuf
 
 type
@@ -52,8 +53,12 @@ method flushFile*(f) {.base, raises: [].} =
 
 const PtrCompat = declared(copyMem)
 
-type Buf = TypedArray[uint8, SharedArrayBuffer] | TypedArray[uint8, ArrayBuffer]
-method read*(f; dst: Buf): int {.ionotImplBase.}
+method read*(f; dst: TypedArray[uint8, auto]): int {.ionotImplBase, expBufInArr.}
+method write*(f; dst: TypedArray[uint8, auto]): int {.ionotImplBase, expBufInArr.}
+
+template genReadWriteTypedArray*(read, dst, body) {.dirty.} =
+  bind expBufInArr
+  method read*(f; dst: TypedArray[uint8, auto]): int {.raises: [IOError], expBufInArr.} = body
 
 method readBuffer*(f; buffer: NPointer; len: Natural): int {.bIO.} =
   buffer.asDataViewIt:
@@ -123,8 +128,6 @@ method readLine*(f): string {.bIO.} =
     if result.len == 0:
       raise
     return
-
-method write*(f; buf: Buf): int {.ionotImplBase.}
 
 method write*(f; c: char) {.bIO.} =
   discard f.write newUint8Array([cast[uint8](c)])

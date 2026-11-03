@@ -10,7 +10,7 @@ import pkg/handy_sugars/assumes
 import pkg/jscompat/utils/[jstypedarrays, jsarraybuffer, ]
 
 import ../private/[jsutils, consts]
-import ./private/helpers
+import ./private/[helpers, macros]
 import ./iobase
 
 type FileHandle = iobase.FileHandle  # shadow system's syncio.FileHandle
@@ -74,11 +74,6 @@ method setFilePos*(f; pos: int64,
 
 method getFilePos*(f): int64 {.raises: [].} = f.filePos
 
-# and shared Uint8Array buffers.
-method pread*(f: FileIO, buf: JsObject, pos: int64): cint {.base, raises: [IOError].} =
-  ## XXX: the file pos won't be updated
-  unreachable
-
 method setFilePos*(f: DenoFileIO; pos: int64,
     rel: FileSeekPos = fspSet) =
   procCall setFilePos(FileIO(f), pos, rel)
@@ -106,12 +101,19 @@ template ioDoRes(body) =
     result = int body
   f.filePos.inc result
 
-type Buf = TypedArray[uint8, SharedArrayBuffer] | TypedArray[uint8, ArrayBuffer]
-method read*(f: RawIOBase, buf: Buf; offset, len: int): int {.base, raises: [IOError].} = unreachable
-method read*(f: RawIOBase, buf: Buf): int {.raises: [IOError].} = f.read(buf, 0, buf.len)
+{.hint[XCannotRaiseY]: off.}
+template genReadWriteTypedArrayX(T: typedesc; read; pra; body) {.dirty.} =
+  method read*(f: T; buf: TypedArray[uint8, auto]; offset, len: int
+               ): int {.pra, raises: [IOError], expBufInArr.} = body
+RawIOBase.genReadWriteTypedArrayX read, base, unreachable
+genReadWriteTypedArray read, buf: f.read(buf, 0, buf.len)
 
-method write*(f: RawIOBase, buf: Buf; offset, len: int): int {.base, raises: [IOError].} = unreachable
-method write*(f: RawIOBase, buf: Buf): int {.raises: [IOError].} = f.write(buf, 0, buf.len)
+RawIOBase.genReadWriteTypedArrayX write, base, unreachable
+genReadWriteTypedArray write, buf: f.write(buf, 0, buf.len)
+
+{.pragma: noOp.}
+template genReadWriteTypedArrayX(T: typedesc; read, body) {.dirty.} =
+  genReadWriteTypedArrayX T, read, noOp, body
 
 proc posParam(f: NodeFileIO; bigInt: static[bool] = true): JsObject =
   # NOTE: node's `fs` requires a JS `number` here.
@@ -120,42 +122,15 @@ proc posParam(f: NodeFileIO; bigInt: static[bool] = true): JsObject =
     when bigInt: f.filePos.toJs
     else: cint(f.filePos).toJs
   else: jsNull
-method read*(f: NodeFileIO, buf: Buf; offset, len: int): int =
+NodeFileIO.genReadWriteTypedArrayX read:
   ioDoRes fsReadSync(f.fd.cint, buf, offset, len, f.posParam)
-method read*(f: DenoFileIO, buf: Buf; offset, len: int): int =
+DenoFileIO.genReadWriteTypedArrayX read:
   ioDoRes denoReadSync(f.denoFile, buf.subarray(offset, offset+len))
 
-method write*(f: NodeFileIO, buf: Buf; offset, len: int): int =
+NodeFileIO.genReadWriteTypedArrayX write:
   ioDoRes fsWriteSync(f.fd.cint, buf, offset, len, f.posParam(false))
-method write*(f: DenoFileIO, buf: Buf; offset, len: int): int =
+DenoFileIO.genReadWriteTypedArrayX write:
   ioDoRes denoWriteSync(f.denoFile, buf.subarray(offset, offset+len))
-
-method pread*(f: NodeFileIO, buf: Buf; pos: int64): cint =
-  jsTryAsIOError:
-    let len = buf.length.to(cint)
-    result = fsReadSync(f.fd.cint, buf, 0, len, cint(pos))
-
-method pread*(f: DenoFileIO, buf: Buf; pos: int64): cint =
-  jsTryAsIOError:
-    discard denoSeekSync(f.denoFile, cint(pos), 0)
-    result = denoReadSync(f.denoFile, buf)
-    discard denoSeekSync(f.denoFile, f.filePos, 0)
-
-method pwrite*(f: RawIOBase, buf: Buf;
-    offset, len: cint, pos: int64): cint {.base, raises: [IOError].} =
-  unreachable
-
-method pwrite*(f: NodeFileIO, buf: Buf;
-    offset, len: cint, pos: int64): cint =
-  jsTryAsIOError:
-    result = fsWriteSync(f.fd.cint, buf, offset, len, cint(pos))
-
-method pwrite*(f: DenoFileIO, buf: Buf; offset, len: cint, pos: int64): cint =
-  jsTryAsIOError:
-    discard denoSeekSync(f.denoFile, cint(pos), 0)
-    result = denoWriteSync(f.denoFile,
-      buf.subarray(offset, offset + len))
-    discard denoSeekSync(f.denoFile, f.filePos, 0)
 
 method getFileSize*(f: NodeFileIO): int64 =
   jsTryAsIOError:
