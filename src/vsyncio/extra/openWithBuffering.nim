@@ -1,8 +1,11 @@
-## NOTE: syncio.open(...bufSize) discards errors when try setting buffering size.
-##
 ## NOTE: the function signatures here overloads syncio.open,
 ##   so use **module**.open or `open(...buffering = ..)`
 ##   to avoid `ambiguous call; both ...`
+##
+## NOTE: `open` functions in this module differs from `syncio.open(...bufSize)` because:
+##
+## - it doesn't discards errors when try setting buffering size.
+## - it will perform normalization on given bufSize (paramter `buffering`), ref `initBufAsPy`_ for details.
 
 when defined(js):
   import ../jsFile as fileobj_js

@@ -15,7 +15,7 @@ import pkg/jscompat/utils/[
 
 
 import ./private/macros
-import ../private/[jsbuf, consts, blksize]
+import ../private/[jsbuf, consts, getPrefBufSize, blksize]
 import ./iobase
 import ./rawio
 
@@ -46,13 +46,13 @@ proc new*[F: BufferedIOBase](raw: RawIOBase): F =
   F(raw: raw, basePos: raw.getFilePos())
 
 method initBufAsPy*(f: BufferedIOBase; buf: int) =
-  case buf
-  of 0:
+  var buf = buf
+  let line_buffering = norm_buffering(f, buf)
+  if buf == 0:
     raise newException(ValueError, "buffer size cannot be 0 for BufferedIOBase")
-  of 1:
+  if line_buffering:
     raise newException(ValueError,
       "BufferedIOBase: " & nonTextNoLineBuffering)
-  elif buf < 0: return # use default
   else:
     f.bufLen = buf
 

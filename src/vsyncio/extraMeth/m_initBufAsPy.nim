@@ -4,7 +4,7 @@ gen initBufAsPy:
   import pkg/handy_sugars/assumes
   import pkg/errno
   from pkg/pyerrors/oserr import errnoMsg
-  import ../private/consts
+  import ../private/[consts, getPrefBufSize]
 
   {.push header: "<stdio.h>".}
   proc c_setvbuf(f: syncio.File, buf: pointer, mode: cint, size: csize_t): cint {.
@@ -16,17 +16,21 @@ gen initBufAsPy:
   {.pop.}
 
   proc initBufAsPy*(nfile: syncio.File, buf: int) =
-    ## init buffering as Python's.
+    ## init bufSize normalized from `buffering`.
+    ## Do as how Python's `open` does.
     ##  NOTE: `buf` == 1 doesn't mean Line-Buffering,
     ##    as this is not of TextIOBase, but RawIOBase,
     ##      which lacks meaning of `line_buffering`
-    if buf < 0:
-      # Nim std/syncio has set default bufSize on open
-      return
+    # Nim std/syncio won't set default bufSize on open
+    var buf = buf
+    let line_buffering = norm_buffering(nfile, buf)
+    discard line_buffering  # see NOTE above
+    #if line_buffering:
+    # 1. ?(IOLBF, 0)
+    # 2. ?warn;return  #NOTE: if using warn for line_buffering, update test_initBufAsPy
     let (bfMode, bfSize) =
-      case buf
-      #of 1: (IOLBF, 0)  # see NOTE above
-      of 0: (IONBF, 0)
+      if buf == 0:
+        (IONBF, 0)
       else:
         (IOFBF, buf)
     setErrno0()
