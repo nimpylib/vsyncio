@@ -6,8 +6,9 @@ import pkg/jscompat/npointer
 import pkg/jscompat/utils/[
   jstypedarrays, jsdataview, jsencodings,
 ]
+import pkg/pyosstat
 import ./private/macros
-import ../private/jsbuf
+import ../private/[jsbuf, blksize]
 
 type
   FileHandle* = distinct cint
@@ -38,6 +39,8 @@ method pushCharBack*(f; c: char) {.ionotImplBase.} ## \
 ## EXT. for impl for peekChar
 method isatty*(f): bool {.
   notImplBase: [].}  ## EXT. like isatty in std/terminal
+
+method getBlkSize*(f): Blksize {.notImplBase: [OSError].}  ## EXT. like CPython's `f(.raw)._blksize`
 method getFileHandle*(f): FileHandle {.notImplBase: [].}
 
 method close*(f) {.base, raises: [].} =

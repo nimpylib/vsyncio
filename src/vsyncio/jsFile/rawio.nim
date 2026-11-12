@@ -8,8 +8,11 @@ import std/jsffi
 
 import pkg/handy_sugars/assumes
 import pkg/jscompat/utils/[jstypedarrays, jsarraybuffer, ]
+import pkg/pyosstat/stat
+import pkg/pyosstat/jsStat
+import pkg/pyerrors/[simperr, oserr]
 
-import ../private/[jsutils, consts]
+import ../private/[jsutils, consts, blksize]
 import ../extra/isatty
 import ./private/[helpers, macros]
 import ./iobase
@@ -32,6 +35,20 @@ type
     denoFile: JsObject
 
 method getFileHandle*(f: FileIO): FileHandle {.raises: [].} = f.fd
+method getBlkSize*(f: FileIO): Blksize {.raises: [OSError].} =
+  result = DEFAULT_BUFFER_SIZE
+  when StatHasBlksize:
+    try:
+      result = statAttr(f.fd.int, st_blksize)
+    except AttributeError: discard
+
+method getBlkSize*(f: DenoFileIO): auto {.raises: [OSError].} =
+  var st: Stat
+  catchJsErrAndRaise: st = f.denoFile.statSync().to Stat
+  try:
+    result = st.st_blksize
+  except AttributeError:
+    return DEFAULT_BUFFER_SIZE
 
 method isatty*(f: FileIO): bool = isatty(f.fd.cint)
 

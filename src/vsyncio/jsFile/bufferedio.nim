@@ -15,21 +15,19 @@ import pkg/jscompat/utils/[
 
 
 import ./private/macros
-import ../private/jsbuf
+import ../private/[jsbuf, consts, blksize]
 import ./iobase
 import ./rawio
 
 export iobase
 type FileHandle = iobase.FileHandle  # shadow system's syncio.FileHandle
 
-const JS_BUF_SIZE = 8192
-
 {.pragma: bIO, raises: [IOError].}
 
 type
   BufferedIOBase* = ref object of IOBase
     raw*: RawIOBase
-    bufLen = JS_BUF_SIZE.cint
+    bufLen = DEFAULT_BUFFER_SIZE.cint
     basePos: int64  # pos when read-buffer is inactive
     # read-buffer, used for getFilePos consistency
     rbuf: TypedArray[uint8, ArrayBuffer]
@@ -58,12 +56,14 @@ method initBufAsPy*(f: BufferedIOBase; buf: int) =
   else:
     f.bufLen = buf
 
-method getFileHandle*(f: BufferedIOBase): FileHandle {.raises: [].} =
-  IOBase(f.raw).getFileHandle()
-method isatty*(f: BufferedIOBase): bool =
-  IOBase(f.raw).isatty()
-
 using f: BufferedIOBase
+template retRaw(name; Raises: untyped = []) {.dirty.} =
+  method name*(f): auto {.raises: Raises.} =
+    f.raw.name()
+retRaw getFileHandle
+retRaw isatty
+retRaw getBlksize, [OSError]
+
 proc discardRbuf(f) =
   f.hasPB = false
   if f.rbufValid:
