@@ -39,10 +39,3 @@ proc denoOpenOpts*(mode: FileMode): JsObject =
   of fmReadWriteExisting: jsExpr"({read: true, write: true})"
   of fmAppend: jsExpr"({write: true, create: true, append: true})"
 
-proc denoErrno*(name: string): cint =
-  case name
-  of "NotFound": ErrNoent.cint
-  of "AlreadyExists": ErrExist.cint
-  of "IsADirectory": ErrIsdir.cint
-  else: 0
-

@@ -19,19 +19,12 @@ const jsPrivOpenFlags: array[FileMode, cstring] = [
 proc open*(f: var File, p: string, mode: FileMode = fmRead, buffering = -1): bool =
   var raw: RawIOBase
   if inDeno:
-    var denoFile: JsObject
+    var denoFile: JsObject = jsNull
     var failed = false
-    var errName: cstring
-    jsTryCatchE:
-      block:
-        denoFile = denoOpenSync(cstring p, denoOpenOpts(mode))
-    do:
-      failed = true
-      {.emit: [errName, " = e.name;"].}
-    if failed:
-      setErrnoRaw(denoErrno($errName))
-      return false
-    if denoFile.isNull or denoFile.isUndefined: return false
+    var errCode: cstring
+    catchJsErrAndSetErrno:
+      denoFile = denoOpenSync(cstring p, denoOpenOpts(mode))
+    if denoFile.isNull: return false
     raw = newDenoFileIO(denoFile, p, mode)
   else:
     var fd: cint = -1
