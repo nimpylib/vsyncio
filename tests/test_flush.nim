@@ -19,6 +19,9 @@ suite "flush":
     f.flush()
     f.close()
   test "after closed":
+   when not defined(linux): skip() else:
+    # on windows: fflush not indiate error on closed file
+    #   as fflose release system-alloc buffer and fflush returns 0 for file with no buffer
     writeF(f)
     f.close()
     expect IOError:
