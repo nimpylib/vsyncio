@@ -47,12 +47,9 @@ proc new*[F: BufferedIOBase](raw: RawIOBase): F =
 
 method initBufAsPy*(f: BufferedIOBase; buf: int) =
   var buf = buf
-  let line_buffering = norm_buffering(f, buf)
+  norm_buffering_for_binary(f, buf)
   if buf == 0:
     raise newException(ValueError, "buffer size cannot be 0 for BufferedIOBase")
-  if line_buffering:
-    raise newException(ValueError,
-      "BufferedIOBase: " & nonTextNoLineBuffering)
   else:
     f.bufLen = buf
 

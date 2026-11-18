@@ -1,6 +1,6 @@
 
 import ./private/utils
-gen initBufAsPy:
+genBase initBufAsPy:
   import pkg/handy_sugars/assumes
   import pkg/errno
   from pkg/pyerrors/oserr import errnoMsg
@@ -23,11 +23,7 @@ gen initBufAsPy:
     ##      which lacks meaning of `line_buffering`
     # Nim std/syncio won't set default bufSize on open
     var buf = buf
-    let line_buffering = norm_buffering(nfile, buf)
-    discard line_buffering  # see NOTE above
-    #if line_buffering:
-    # 1. ?(IOLBF, 0)
-    # 2. ?warn;return  #NOTE: if using warn for line_buffering, update test_initBufAsPy
+    norm_buffering_for_binary(nfile, buf)
     let (bfMode, bfSize) =
       if buf == 0:
         (IONBF, 0)

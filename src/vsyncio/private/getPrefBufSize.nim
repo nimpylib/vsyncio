@@ -1,5 +1,5 @@
 
-import ../private/consts
+import ./[consts, warnings]
 when defined(js):
   import ../jsFile/iobase
   type File = IOBase
@@ -24,4 +24,13 @@ proc norm_buffering*(file: File, buffering: var int): bool {.discardable.} =
       DEFAULT_BUFFER_SIZE
   if buffering < 0: raise newException(ValueError, "invalid buffering size")
   result = line_buffering
+
+proc norm_buffering_for_binary*(file: File, buffering: var int,
+                                stacklevel: static[int] = 1) =
+  bind hash
+  let line_buffering = norm_buffering(file, buffering)
+  if line_buffering:
+    warnings.warn("line buffering (buffering=1) isn't supported in binary " &
+                  "mode, the default buffer size will be used",
+                  RuntimeWarning, 2+stacklevel)
 
