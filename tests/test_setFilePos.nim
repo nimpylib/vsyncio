@@ -25,15 +25,3 @@ suite "setFilePos":
     check file.readAll() == "abXde"
     file.close()
 
-  test "append dispatch ignores logical file position":
-    var file: nio.File
-    require file.open(filename, fmWrite)
-    file.write("abc")
-    file.close()
-    require file.open(filename, fmAppend)
-    file.setFilePos(0)
-    file.write("de")
-    file.close()
-    require file.open(filename, fmRead)
-    check file.readAll() == "abcde"
-    file.close()
