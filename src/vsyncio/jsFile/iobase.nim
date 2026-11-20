@@ -9,11 +9,16 @@ import pkg/jscompat/utils/[
 import pkg/pyosstat
 import ./private/macros
 import ../private/[jsbuf, blksize]
+import ../private/warnings/warncls
 
 type
   FileHandle* = distinct cint
   IOBase* = ref object of RootObj
     closed: bool
+type
+  File* = IOBase
+
+var stdin*, stdout*, stderr*: File  ## NOTE: init in ./stdios
 
 using f: IOBase
 proc closed*(f): bool = f.closed
@@ -32,7 +37,7 @@ macro ionotImplBase(def) =
 {.pragma: bIO, base, raises: [IOError].}
 
 {.hint[XCannotRaiseY]: off.}
-method initBufAsPy*(f; buf: int) {.base, raises: [IOError, ValueError].} =
+method initBufAsPy*(f; buf: int) {.base, raises: [IOError, ValueError, Warning].} =
   ## EXT.
   unreachable
 method pushCharBack*(f; c: char) {.ionotImplBase.} ## \

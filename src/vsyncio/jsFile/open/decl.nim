@@ -1,4 +1,3 @@
 
 import ../iobase
-type
-  File* = IOBase
+export iobase.File
