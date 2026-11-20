@@ -7,12 +7,12 @@ import vsyncio/private/warnings
 
 import ./utils
 
-template expectWarning(w: Warning; body) =
+template expectWarning(w: typed; body) =
   catch_warnings_it(check it.category == w): body
 
 suite "initBufAsPy":
   test "bufSize == 1":
-    var f = open(filename, fmWrite)
+    var f = nio.open(filename, fmWrite)
     defer: removeFile(filename)
     expectWarning RuntimeWarning:
       f.initBufAsPy(1)
