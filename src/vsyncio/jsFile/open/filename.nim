@@ -36,7 +36,7 @@ proc open*(f: var File, p: string, mode: FileMode = fmRead, buffering = -1): boo
     f = raw
   else:
     f = new[BufferedIOBase](raw)
-    f.initBufAsPy buffering
+    f.initBufAsPyInternal buffering
   result = true
 
 proc open*(filename: string,

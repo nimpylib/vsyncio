@@ -11,19 +11,19 @@ when defined(js):
   import ../jsFile as fileobj_js
   export open
 else:
-  import ../extraMeth/m_initBufAsPy
+  import ../extraMeth/m_initBufAsPyInternal
   proc open*(f: var File, p: string, mode: FileMode = fmRead, buffering: int): bool =
     result = f.open(p, mode)
     if result:
-      f.initBufAsPy buffering
+      f.initBufAsPyInternal buffering
 
   proc open*(p: string, mode: FileMode = fmRead, buffering: int): File =
     result = open(p, mode)
-    result.initBufAsPy buffering
+    result.initBufAsPyInternal buffering
 
   proc open*(f: var File, filehandle: FileHandle,
              mode: FileMode = fmRead; buffering: int): bool =
     result = f.open(filehandle, mode)
     if result:
-      f.initBufAsPy buffering
+      f.initBufAsPyInternal buffering
 

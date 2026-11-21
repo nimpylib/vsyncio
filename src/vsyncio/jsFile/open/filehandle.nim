@@ -27,6 +27,6 @@ proc open*(f: var File, filehandle: FileHandle,
       f = newFileIO(filehandle, name, mode)
     else:
       f = new[BufferedIOBase](name, filehandle, mode)
-      f.initBufAsPy buffering
+      f.initBufAsPyInternal buffering
     return true
 

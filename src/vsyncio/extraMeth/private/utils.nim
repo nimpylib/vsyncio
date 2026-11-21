@@ -1,7 +1,7 @@
 
 template genImpl(imported; name; nameDef) {.dirty.} =
   when defined(js):
-    import imported as fileobj_js
+    import imported as nio
     export name
   else:
     nameDef
