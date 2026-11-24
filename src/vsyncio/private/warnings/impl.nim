@@ -1,8 +1,12 @@
 
+import std/tables
 import std/strutils
 import std/options
 include ./comm
 import ./internal_types
+import ./filters
+export filters except do_filters
+
 using
   category: WarningClass
 const None = none string
@@ -63,18 +67,28 @@ proc getFrameOf(stacklevel: int): auto =
     for _ in 1..stacklevel:
       result = result.prev
 
+proc warn_explicit*(message: string|(ref Warning), category: typedesc[Warning],
+    filename; lineno;
+    module=None, registry=getDefRegistry(),
+    module_globals=None, source=None) =
+  when message is string:
+    let text = message
+    let message = newException(category, text)
+  else:
+    let text = str(message)
+  if not do_filters(message, text, category, filename, lineno, module, registry, module_globals):
+    return
+  showwarning(message, category, filename, lineno, nil, source)
+
 template warn*(message: string|(ref Warning), category: typedesc[Warning] = UserWarning
     , stacklevel=1, source = None
   ) = {.line.}:
-  bind showwarning
+  bind warn_explicit
   bind noGetFrame, getFrameOf
-  let
-    pos = when noGetFrame:
-      instantiationInfo(index = stacklevel-2) # XXX: I haven't tried out what the param means, nor doc says
-    else:
-      getFrameOf(stacklevel)
-  let
-    lineno = pos.line
-    fname = $pos.filename
-  showwarning(message, category, fname, lineno, nil, source)
+  bind getDefRegistry, None
+  let pos = when noGetFrame:
+    instantiationInfo(index = stacklevel-2) # XXX: I haven't tried out what the param means, nor doc says
+  else:
+    getFrameOf(stacklevel)
+  warn_explicit(message, category, pos.filename.`$`, pos.line, None, getDefRegistry(), None, source)
 

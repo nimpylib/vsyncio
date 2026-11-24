@@ -22,6 +22,8 @@ template pylib(x, ver) =
            else: pylibPre & x
 
 pylib "handy_sugars", " ^= 0.1.0"
+pylib "pyrepr", " ^= 0.1.0"
+pylib "pyre", " ^= 0.1.0"
 pylib "pyerrors", " ^= 0.1.0"
 pylib "jscompat", " ^= 0.1.9"
 pylib "errno", " ^= 0.1.0"

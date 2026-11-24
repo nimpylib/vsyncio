@@ -1,5 +1,8 @@
 
 import std/macros
+import pkg/pyrepr
+export pyrepr
+
 
 type
   BltinWarning{.pure.} = enum
@@ -10,10 +13,10 @@ type
     ImportWarning
     UnicodeWarning BytesWarning EncodingWarning
     ResourceWarning
-macro gens*(Base: typedesc) =
+macro gens*(Base: typedesc; declClass) =
   result = newStmtList()
   for i in BltinWarning:
     let id = ident $i
     result.add quote do:
-      type `id`* = object of `Base`
+      `declClass` `id`, `Base`
 

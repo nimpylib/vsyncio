@@ -1,19 +1,18 @@
 
 import std/strutils
 import std/options
+import pkg/pyrepr
 include ./comm
 import ./utils
 export utils except getClass
 type
   WarningMessage* = ref object
     message*: ref Warning
-    #category: WarningClass  #see below
-    `-category_name`: string
+    category*: WarningClass
     filename*: string
     lineno*: int
     file*: File
     line*: Option[string]
-template category*(self: WarningMessage): auto = WarningClass(name: self.`-category_name`)
 
 const None = none string
 #const DefWarning = WarningClass(name: "UserWarning")  ## reprenset the `warning = None` in python. \
@@ -26,9 +25,19 @@ proc newWarningMessage*(message: string|(ref Warning); category;
   result = new WarningMessage
   template st(a) = result.a = a
   st message
-  result.`-category_name` = category.getClass.name
+  result.category = category.getClass
   st filename
   st lineno
   st file
   st line
+
+proc `$`*(self: WarningMessage): string =
+  template r(s): untyped = pyrepr(s)
+  "{message : $#, category : $#, filename : $#, lineno : $#, line : $#}" %
+    [self.message.repr, self.category.name.r, self.filename.r, self.lineno.`$`,
+      if self.line.isSome: self.line.unsafeGet.r
+      else: "None"
+    ]
+
+proc repr*(self: WarningMessage): string = "<warnings.WarningMessage " & $self & '>'
 

@@ -1,5 +1,6 @@
 
 import ./[internal_types, impl]
+import ./private/locks
 #[
 template catch_warnings*(record=false) =
   ## PY-DIFF:
@@ -13,7 +14,7 @@ template decl_showwarning(body): untyped {.dirty.} =
 template catch_warnings_it*(doIt; body) =
   ## EXT.
   bind showwarnmsg, decl_showwarning
-  block:
+  wmMutLock:
     let old = showwarnmsg
     defer: showwarnmsg = old
     showwarnmsg = decl_showwarning:

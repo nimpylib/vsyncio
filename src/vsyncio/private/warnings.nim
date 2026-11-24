@@ -6,5 +6,5 @@
 
 import ./warnings/[warncls, internal_types, impl, dbg]
 export warncls, impl, dbg
-export internal_types except newWarningMessage, WarningMessage, WarningClass
+export internal_types except newWarningMessage, WarningMessage
 
