@@ -12,9 +12,8 @@ suite "flush stdio":
   test "stdout":
     nio.stdout.flush()
 suite "flush":
-  tearDown:
-    removeFile(filename)
   test "normal":
+    defer: removeFile(filename)
     writeF(f)
     f.flush()
     f.close()
