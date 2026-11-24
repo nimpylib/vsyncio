@@ -132,9 +132,9 @@ method readLine*(f): string {.bIO.} =
           result.setLen(result.len - 1)
         return
       result.add c
-  except EOFError:
+  except EOFError as e:
     if result.len == 0:
-      raise
+      raise e
     return
 
 method write*(f; c: char) {.bIO.} =
