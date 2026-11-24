@@ -31,13 +31,3 @@ proc newWarningMessage*(message: string|(ref Warning); category;
   st file
   st line
 
-proc `$`*(self: WarningMessage): string =
-  template r(s): untyped = pyrepr(s)
-  "{message : $#, category : $#, filename : $#, lineno : $#, line : $#}" %
-    [self.message.repr, self.category.name.r, self.filename.r, self.lineno.`$`,
-      if self.line.isSome: self.line.unsafeGet.r
-      else: "None"
-    ]
-
-proc repr*(self: WarningMessage): string = "<warnings.WarningMessage " & $self & '>'
-

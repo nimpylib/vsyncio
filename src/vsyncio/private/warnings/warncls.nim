@@ -15,12 +15,6 @@ method str*(self): string {.base, raises: [].} =
   ## `__str__`
   self.msg
 
-proc repr*(self): string =
-  result = $self.getClass.name
-  result.add '('
-  result.add self.str.pyrepr
-  result.add ')'
-
 gens Warning, declClass
 
 when isMainModule:

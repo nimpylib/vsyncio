@@ -1,8 +1,5 @@
 
 import std/macros
-import pkg/pyrepr
-export pyrepr
-
 
 type
   BltinWarning{.pure.} = enum

@@ -5,12 +5,10 @@ import std/options
 include ./comm
 import ./internal_types
 import ./filters
-export filters except do_filters
+export filters except do_filters, decl_do_filters
 
-using
-  category: WarningClass
 const None = none string
-proc formatwarning*(message: string, category; filename; lineno;
+proc formatwarning*(message: string, category: WarningClass; filename; lineno;
                    line = None): string =
   result = "$#:$#: $#: $#\n" % [filename, $lineno, category.name, message]  # can use strformat.fmt
   template addSource(line) =
@@ -31,7 +29,7 @@ proc formatwarning*(message: string, category; filename; lineno;
   else:
     addSource line.unsafeGet
 
-proc formatwarning*(message: ref Warning, category; filename; lineno;
+proc formatwarning*(message: ref Warning, category: WarningClass; filename; lineno;
                    line = None): string =
   formatwarning(str(message), category, filename, lineno, line)
 
@@ -50,12 +48,12 @@ var showwarnmsg* = decl_showwarning:
     if file.isNil: return
   file.write formatwarning(str(msg.message), msg.category, msg.filename, msg.lineno, msg.line)
 
-proc showwarning*(message: string|(ref Warning), category: typedesc[Warning]; filename; lineno; file: File = nil; line = None) =
+proc showwarning*(message: string|(ref Warning), category; filename; lineno; file: File = nil; line = None) =
   template Sor(s, o): untyped =
     when message is string: s else: o
   showwarnmsg(newWarningMessage(
       Sor(message, str(message)),
-      category #TODO: Sor(category, realTypeOf(message))
+      category
           , filename, lineno, file, line
   ))
 
@@ -67,7 +65,7 @@ proc getFrameOf(stacklevel: int): auto =
     for _ in 1..stacklevel:
       result = result.prev
 
-proc warn_explicit*(message: string|(ref Warning), category: typedesc[Warning],
+proc warn_explicit*(message: string|(ref Warning), category;
     filename; lineno;
     module=None, registry=getDefRegistry(),
     module_globals=None, source=None) =
@@ -76,7 +74,7 @@ proc warn_explicit*(message: string|(ref Warning), category: typedesc[Warning],
     let message = newException(category, text)
   else:
     let text = str(message)
-  if not do_filters(message, text, category, filename, lineno, module, registry, module_globals):
+  if not do_filters(message, text, category.getClass, filename, lineno, module, registry, module_globals):
     return
   showwarning(message, category, filename, lineno, nil, source)
 
