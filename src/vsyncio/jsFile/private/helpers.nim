@@ -1,7 +1,6 @@
 
 import std/jsffi
 
-import pkg/jscompat/utils/oserr
 import pkg/jscompat/utils/dispatch
 
 proc jsFstatSize*(o: JsObject): cint {.importjs: "#.size".}
