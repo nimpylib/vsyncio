@@ -1,10 +1,9 @@
 
-import std/strutils
 import std/options
-import pkg/pyrepr
 include ./comm
 import ./utils
 export utils except getClass
+type File = nio.File
 type
   WarningMessage* = ref object
     message*: ref Warning

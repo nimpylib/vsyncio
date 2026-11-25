@@ -48,7 +48,7 @@ var showwarnmsg* = decl_showwarning:
     if file.isNil: return
   file.write formatwarning(str(msg.message), msg.category, msg.filename, msg.lineno, msg.line)
 
-proc showwarning*(message: string|(ref Warning), category; filename; lineno; file: File = nil; line = None) =
+proc showwarning*(message: string|(ref Warning), category; filename; lineno; file: nio.File = nil; line = None) =
   template Sor(s, o): untyped =
     when message is string: s else: o
   showwarnmsg(newWarningMessage(

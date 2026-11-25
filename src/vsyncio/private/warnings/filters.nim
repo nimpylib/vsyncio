@@ -1,9 +1,9 @@
 ## placeholder for warning filters; real implementation is in nimpylib/pywarnings
 import std/tables
-import std/strutils
 import std/options
 include ./comm
 import ./internal_types
+export nio
 
 const None = none string
 proc getDefRegistry*: auto =
@@ -25,6 +25,7 @@ template decl_do_filters*(body) {.dirty.} =
       ): bool {.raises: [Warning].} =
     body
 
+{.hint[XCannotRaiseY]: off.}
 decl_do_filters:
   return true
 
