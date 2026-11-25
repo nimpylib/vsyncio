@@ -6,7 +6,6 @@ import pkg/jscompat/npointer
 import pkg/jscompat/utils/[
   jstypedarrays, jsdataview, jsencodings,
 ]
-import pkg/pyosstat
 import ./private/macros
 import ../private/[jsbuf, blksize]
 import ../private/warnings/warncls

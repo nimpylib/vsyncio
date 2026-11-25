@@ -15,12 +15,11 @@ import pkg/jscompat/utils/[
 
 
 import ./private/macros
-import ../private/[jsbuf, consts, getPrefBufSize, blksize]
+import ../private/[jsbuf, consts, getPrefBufSize]
 import ./iobase
 import ./rawio
 
 export iobase
-type FileHandle = iobase.FileHandle  # shadow system's syncio.FileHandle
 
 {.pragma: bIO, raises: [IOError].}
 
